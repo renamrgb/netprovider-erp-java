@@ -73,4 +73,4 @@ O NetProvider ERP implementa o padrão Event Sourcing, o que significa que:
 
 ## Licença
 
-(Licença a definir) 
+(Licença a definir)
