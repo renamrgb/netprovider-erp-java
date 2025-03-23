@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  # Database - PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: netprovider-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: netprovider
+      POSTGRES_PASSWORD: netprovider
+      POSTGRES_DB: netprovider
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - netprovider-network
+
+  # Database - MongoDB
+  mongodb:
+    image: mongo:6.0
+    container_name: netprovider-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: netprovider
+      MONGO_INITDB_ROOT_PASSWORD: netprovider
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - netprovider-network
+
+  # Message Broker - Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.2
+    container_name: netprovider-zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+    networks:
+      - netprovider-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.2
+    container_name: netprovider-kafka
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - netprovider-network
+
+  # Web Server - NGINX
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: netprovider-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - api-gateway
+    networks:
+      - netprovider-network
+
+  # Serviços serão adicionados à medida que forem desenvolvidos
+
+networks:
+  netprovider-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mongodb_data:
+  zookeeper_data:
+  kafka_data: 
